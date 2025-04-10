@@ -1,273 +1,113 @@
-{
- "cells": [
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "# Multi Armed Bandit\n",
-    "\n",
-    "\n",
-    "* El problema del \"***Bandido Multi-Brazo***\" es un problema clásico del aprendizaje por refuerzo basado en el ***juego de las máquinas \"tragaperras\"*** donde se \"tira del brazo\" (palanca) de la \"tragaperras\" y se obtiene una recompensa por el juego, positiva si se gana dinero o negativa si perdemos el dinero.\n",
-    "\n",
-    "\n",
-    "* A este problema se le conoce como el problema del \"Bandido Multi-Brazo\" al denominarse una máquina \"tragaperras\" como \"Bandido de un solo brazo\". Cuando se juega a varias máquinas \"tragaperras\" se denomina \"Bandido de Multiples Brazos\", de ahí el nombre de \"Multi Armed Bandit\" (MAB):\n",
-    "\n",
-    "\n",
+import random
+import numpy as np
 
-    "\n",
-    "\n",
-    "* El objetivo de este problema es el de ***jugar un 'P' partidas a las 'K' \"tragaperras\" y obtener el mayor beneficio posible*** (la mayor recompensa posible).\n",
-    "\n",
-    "\n",
-    "* Para ello tendremos que ir jugando partidas en las 'K' \"tragaperras\" y descubrir cual es la distribución de probabilidad de obtener premio en cada una de las \"tragaperras\". Con esto conseguiremos saber a ***que máquinas jugar y en que orden para máximizar nuestros beneficios (o recompensas)***.\n",
-    "\n",
-    "\n",
-    "\n",
-    "* Para resolver este problema definimos el $Q(a)$ como la ***recompensa media (beneficios medios) recibida por partida en la \"tragaperras\"*** $a$ y se calcula como:\n",
-    "\n",
-    "\n",
-    "$$Q(a) = \\frac{R_a}{N_a}$$\n",
-    "\n",
-    "\n",
-    "* Siendo:\n",
-    "    + $R_a$: Suma de las recompensas (beneficiós) obtenidos en la \"tragaperras\" $a$.\n",
-    "    + $N_a$: Número total de partidas jugadas en la \"tragaperras\" $a$.\n",
-    "    \n",
-    "    \n",
-    "* El ***objetivo es encontrar la máquina \"tragaperras\" que mayor beneficio (recompensa) dé***:\n",
-    "\n",
-    "$$Q(a^{*}) = max Q(a)$$\n",
-    "\n",
-    "\n",
-    "* Siendo:\n",
-    "    + $a^{*}$: El conjunto de las 'K' \"tragaperras\" a las que se juega.\n",
-    "    \n",
-    "    \n",
-    "* En este problema es muy importante aplicar correctamente los conceptos de **\"Explotación\" y \"Exploración\"** ya que si solo nos dedicamos a \"*Explorar*\" obtendremos el valor medio de recompensas que dén las 'K' \"tragaperras\" y si solo nos dedicamos a \"*Explotar*\" obtendremos la recompensa que nos dé la primera \"tragaperras\" a la que jugemos.\n",
-    "\n",
-    "\n",
-    "* Para ello debemos de seguir una política conocida como \"***epsilon-greedy policy***\" la cual seleccionará una \"tragaperras\" al azar con probabilidad $\\epsilon$ para jugar y *explorar* o seleccionará la mejor \"tragaperras\" con probabilidad $1-\\epsilon$.\n",
-    "\n",
-    "\n",
 
-    "\n",
-    "\n",
-    "* Veamos a continuación un ejemplo:\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 2,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import random\n",
-    "import numpy as np\n",
-    "\n",
-    "\n",
-    "def gen_bandits():\n",
-    "    \"\"\"\n",
-    "    Función que devuelve una lista de probabilidades ordenadas al azar\n",
-    "    En esta lista se encuentra la probabilidad de premio de cada \"tragaperras\"\n",
-    "    \"\"\"\n",
-    "    bandits = [0.1, 0.1, 0.1, 0.2, 0.6]\n",
-    "    random.shuffle(bandits)\n",
-    "    return bandits\n",
-    "    \n",
-    "    \n",
-    "def multi_armed_bandit(num_games=1000, epsilon=0.1, verbose=False):\n",
-    "    \n",
-    "    bandits = gen_bandits()\n",
-    "    total_reward = 0\n",
-    "    acum_reward_bandit = np.zeros(len(bandits))  # numerador\n",
-    "    num_selected_bandit = np.zeros(len(bandits)) # denominador\n",
-    "    q_bandits = np.zeros(len(bandits))            # Q(a)\n",
-    "    \n",
-    "    if verbose:\n",
-    "        print(\"Initial Bandits Distribution\\n  {}\".format(bandits))\n",
-    "    \n",
-    "    for game in range(0,num_games):\n",
-    "        \n",
-    "        # Hago una copiar de los Q(a)\n",
-    "        old_q_bandits = q_bandits.copy()\n",
-    "        \n",
-    "        # Selecciono \"tragaperras\" a la que jugar\n",
-    "        if np.random.random() < epsilon:\n",
-    "            bandit = np.random.randint(len(bandits)) # Exploro\n",
-    "        else:\n",
-    "            bandit = np.random.choice(np.flatnonzero(q_bandits == q_bandits.max())) # Exploto \n",
-    "            \n",
-    "        # Obtengo el reward\n",
-    "        reward = 1 if (np.random.random() < bandits[bandit]) else 0\n",
-    "        \n",
-    "        # Actualizo reward total\n",
-    "        total_reward += reward\n",
-    "        \n",
-    "        # Actualizo valor (Q) de la \"tragaperras\"\n",
-    "        acum_reward_bandit[bandit] += reward\n",
-    "        num_selected_bandit[bandit] += 1\n",
-    "        q_bandits[bandit] = acum_reward_bandit[bandit] / num_selected_bandit[bandit]\n",
-    "        \n",
-    "        if verbose:\n",
-    "            print(\"\\nGAME {game}\\n  Old Q_Bandits = {old_q_bandits}\\n  Selected Bandit = {bandit} \\\n",
-    "                  \\n  Reward = {reward}\\n  Q_Bandits = {q_bandits}\"\n",
-    "                  .format(game=game+1, old_q_bandits=old_q_bandits, bandit=bandit, \n",
-    "                          reward=reward, q_bandits=q_bandits))\n",
-    "    \n",
-    "    return bandits, total_reward, q_bandits, num_selected_bandit\n"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### CASO PRÁCTICO - TAREA 1\n",
-    "\n",
-    "\n",
-    "¿Cuáles el valor de épsilon que maximiza la imagen con mayor número de clics?"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 3,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "El valor de épsilon que maximiza el número de clics es: 0.01\n",
-      "El número total de clics obtenido con épsilon 0.01 es: 583\n"
-     ]
-    }
-   ],
-   "source": [
-    "import matplotlib.pyplot as plt\n",
-    "\n",
-    "# Lista de valores de épsilon a probar\n",
-    "epsilon_values = [0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9]\n",
-    "\n",
-    "# Diccionario para almacenar los resultados de cada ejecución\n",
-    "results = {}\n",
-    "\n",
-    "# Realizar el análisis para cada valor de épsilon\n",
-    "for epsilon in epsilon_values:\n",
-    "    _, total_reward, _, _ = multi_armed_bandit(num_games=1000, epsilon=epsilon, verbose=False)\n",
-    "    results[epsilon] = total_reward\n",
-    "\n",
-    "# Encontrar el valor de épsilon que maximiza el número de clics\n",
-    "best_epsilon = max(results, key=results.get)\n",
-    "max_reward = results[best_epsilon]\n",
-    "\n",
-    "# Imprimir el resultado\n",
-    "print(f\"El valor de épsilon que maximiza el número de clics es: {best_epsilon}\")\n",
-    "print(f\"El número total de clics obtenido con épsilon {best_epsilon} es: {max_reward}\")\n"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### TAREA 2\n",
-    "¿Cuáles la imagen que más clics obtiene y cuántos?"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 4,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "La imagen que obtiene la mayor cantidad de clics es la imagen C con 70 clics.\n"
-     ]
-    }
-   ],
-   "source": [
-    "# Definir los resultados de las imágenes en una lista\n",
-    "resultados_imagenes = [('A', 10, 218, 0.05), ('B', 5, 196, 0.03), ('C', 70, 190, 0.37), \n",
-    "                      ('D', 3, 188, 0.02), ('E', 5, 208, 0.02)]\n",
-    "\n",
-    "# Encontrar la imagen con más clics\n",
-    "max_clics = 0\n",
-    "imagen_max_clics = ''\n",
-    "for imagen, clics, _, _ in resultados_imagenes:\n",
-    "    if clics > max_clics:\n",
-    "        max_clics = clics\n",
-    "        imagen_max_clics = imagen\n",
-    "\n",
-    "# Imprimir el resultado\n",
-    "print(f\"La imagen que obtiene la mayor cantidad de clics es la imagen {imagen_max_clics} con {max_clics} clics.\")\n"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### TAREA 3\n",
-    "Poniendo una ratio de explotación del 100%, ¿Qué resultado se obtiene?"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 5,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Con una tasa de explotación del 100%, el total de clics obtenido es: 598\n"
-     ]
-    }
-   ],
-   "source": [
-    "def multi_armed_bandit_exploitation_only(num_games=1000, verbose=False):\n",
-    "    bandits = gen_bandits()\n",
-    "    total_reward = 0\n",
-    "    num_selected_bandit = np.zeros(len(bandits)) # denominador\n",
-    "\n",
-    "    best_bandit = np.argmax(bandits)  # selecciona la \"tragaperras\" con la probabilidad más alta\n",
-    "\n",
-    "    for game in range(num_games):\n",
-    "        reward = 1 if (np.random.random() < bandits[best_bandit]) else 0\n",
-    "        total_reward += reward\n",
-    "        num_selected_bandit[best_bandit] += 1\n",
-    "\n",
-    "        if verbose:\n",
-    "            print(f\"\\nGAME {game + 1}\\n  Selected Bandit = {best_bandit}\\n  Reward = {reward}\\n\")\n",
-    "\n",
-    "    return total_reward, num_selected_bandit\n",
-    "\n",
-    "# Simular el resultado con una tasa de explotación del 100%\n",
-    "total_reward_exploitation, num_selected_bandit_exploitation = multi_armed_bandit_exploitation_only(num_games=1000, verbose=False)\n",
-    "\n",
-    "# Imprimir el resultado\n",
-    "print(f\"Con una tasa de explotación del 100%, el total de clics obtenido es: {total_reward_exploitation}\")\n"
-   ]
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.11.5"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 2
-}
+def gen_bandits():
+    """
+    Función que devuelve una lista de probabilidades ordenadas al azar
+    En esta lista se encuentra la probabilidad de premio de cada "tragaperras"
+    """
+    bandits = [0.1, 0.1, 0.1, 0.2, 0.6]
+    random.shuffle(bandits)
+    return bandits
+    
+    
+def multi_armed_bandit(num_games=1000, epsilon=0.1, verbose=False):
+    
+    bandits = gen_bandits()
+    total_reward = 0
+    acum_reward_bandit = np.zeros(len(bandits))  # numerador
+    num_selected_bandit = np.zeros(len(bandits)) # denominador
+    q_bandits = np.zeros(len(bandits))            # Q(a)
+    
+    if verbose:
+        print("Initial Bandits Distribution\n  {}".format(bandits))
+    
+    for game in range(0,num_games):
+        
+        # Hago una copiar de los Q(a)
+        old_q_bandits = q_bandits.copy()
+        
+        # Selecciono "tragaperras" a la que jugar
+        if np.random.random() < epsilon:
+            bandit = np.random.randint(len(bandits)) # Exploro
+        else:
+            bandit = np.random.choice(np.flatnonzero(q_bandits == q_bandits.max())) # Exploto 
+            
+        # Obtengo el reward
+        reward = 1 if (np.random.random() < bandits[bandit]) else 0
+        
+        # Actualizo reward total
+        total_reward += reward
+        
+        # Actualizo valor (Q) de la "tragaperras"
+        acum_reward_bandit[bandit] += reward
+        num_selected_bandit[bandit] += 1
+        q_bandits[bandit] = acum_reward_bandit[bandit] / num_selected_bandit[bandit]
+        
+        if verbose:
+            print("\nGAME {game}\n  Old Q_Bandits = {old_q_bandits}\n  Selected Bandit = {bandit} \
+                  \n  Reward = {reward}\n  Q_Bandits = {q_bandits}"
+                  .format(game=game+1, old_q_bandits=old_q_bandits, bandit=bandit, 
+                          reward=reward, q_bandits=q_bandits))
+    
+    return bandits, total_reward, q_bandits, num_selected_bandit
+
+import matplotlib.pyplot as plt
+
+# Lista de valores de épsilon a probar
+epsilon_values = [0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9]
+
+# Diccionario para almacenar los resultados de cada ejecución
+results = {}
+
+# Realizar el análisis para cada valor de épsilon
+for epsilon in epsilon_values:
+    _, total_reward, _, _ = multi_armed_bandit(num_games=1000, epsilon=epsilon, verbose=False)
+    results[epsilon] = total_reward
+
+# Encontrar el valor de épsilon que maximiza el número de clics
+best_epsilon = max(results, key=results.get)
+max_reward = results[best_epsilon]
+
+# Imprimir el resultado
+print(f"El valor de épsilon que maximiza el número de clics es: {best_epsilon}")
+print(f"El número total de clics obtenido con épsilon {best_epsilon} es: {max_reward}")
+
+# Definir los resultados de las imágenes en una lista
+resultados_imagenes = [('A', 10, 218, 0.05), ('B', 5, 196, 0.03), ('C', 70, 190, 0.37), 
+                      ('D', 3, 188, 0.02), ('E', 5, 208, 0.02)]
+
+# Encontrar la imagen con más clics
+max_clics = 0
+imagen_max_clics = ''
+for imagen, clics, _, _ in resultados_imagenes:
+    if clics > max_clics:
+        max_clics = clics
+        imagen_max_clics = imagen
+
+# Imprimir el resultado
+print(f"La imagen que obtiene la mayor cantidad de clics es la imagen {imagen_max_clics} con {max_clics} clics.")
+
+def multi_armed_bandit_exploitation_only(num_games=1000, verbose=False):
+    bandits = gen_bandits()
+    total_reward = 0
+    num_selected_bandit = np.zeros(len(bandits)) # denominador
+
+    best_bandit = np.argmax(bandits)  # selecciona la "tragaperras" con la probabilidad más alta
+
+    for game in range(num_games):
+        reward = 1 if (np.random.random() < bandits[best_bandit]) else 0
+        total_reward += reward
+        num_selected_bandit[best_bandit] += 1
+
+        if verbose:
+            print(f"\nGAME {game + 1}\n  Selected Bandit = {best_bandit}\n  Reward = {reward}\n")
+
+    return total_reward, num_selected_bandit
+
+# Simular el resultado con una tasa de explotación del 100%
+total_reward_exploitation, num_selected_bandit_exploitation = multi_armed_bandit_exploitation_only(num_games=1000, verbose=False)
+
+# Imprimir el resultado
+print(f"Con una tasa de explotación del 100%, el total de clics obtenido es: {total_reward_exploitation}")
